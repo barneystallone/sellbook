@@ -7,9 +7,10 @@ import '../components/search_box.dart';
 import '../components/td_app_bar.dart';
 import '../models/book_model.dart';
 import '../resources/app_color.dart';
-import '../components/list_book.dart';
 import '../services/local/shared_prefs.dart';
 import 'package:badges/badges.dart' as badges;
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:animations/animations.dart';
 
 class HomePage extends StatefulWidget {
   // final String title;
@@ -20,18 +21,41 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _searchController = TextEditingController();
-
   final SharedPrefs _prefs = SharedPrefs();
-  String _searchText = '';
-  int _totalPrice = 0;
-  int _totalQuantity = 0;
+  late TextEditingController _searchController;
+  late FocusNode _focusNode;
+  late String _searchText;
+  late int _totalPrice;
+  late int _totalQuantity;
+  late double _cartHeight;
+  late double _cartMaxHeight;
   List<BookModel> _books = [];
+  List<BookModel> _booksInCart = [];
   List<BookModel> _searchBooks = [];
+
+  Widget overlay = Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: AppColor.black.withOpacity(0.5));
+
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode();
+    _searchController = TextEditingController();
+    _searchText = '';
+    _totalPrice = 0;
+    _totalQuantity = 0;
+    _cartHeight = 0;
+    _cartMaxHeight = 600;
     initBooks();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -39,6 +63,12 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
         backgroundColor: AppColor.bgColor,
         appBar: TdAppBar(
+            overlay: (_cartHeight > 0)
+                ? GestureDetector(
+                    onTap: toggleOverlay,
+                    child: overlay,
+                  )
+                : null,
             rightPressed: () async {
               bool? status = await showDialog<bool>(
                 context: context,
@@ -85,6 +115,7 @@ class _HomePageState extends State<HomePage> {
                   child: Column(
                     children: [
                       SearchBox(
+                          focusNode: _focusNode,
                           onChanged: (value) => setState(() {
                                 _searchText = value;
                                 searchBook();
@@ -109,8 +140,10 @@ class _HomePageState extends State<HomePage> {
                           BookModel book = _searchBooks.toList()[index];
                           return BookItem(
                             book: book,
-                            increment: () => increment(index),
-                            decrement: () => decrement(index),
+                            increment: () => increment(_searchBooks[index]),
+                            decrement: () => setState(() {
+                              decrement(_searchBooks[index]);
+                            }),
                           );
                         },
                         separatorBuilder: (context, index) =>
@@ -121,85 +154,200 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            if (_totalQuantity > 0)
+            if (_cartHeight > 0)
+              GestureDetector(
+                onTap: toggleOverlay,
+                child: overlay,
+              ),
+
+            // Footer + Cart Modal
+            if (_totalQuantity > 0) ...[
               Positioned(
                 left: 0.0,
                 right: 0,
                 bottom: 0,
-                child: Container(
-                  width: double.infinity,
-                  height: 50,
-                  decoration: BoxDecoration(
-                      color: HexColor('#eeeff5'),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color.fromARGB(39, 49, 49, 49),
-                          offset: Offset(0.0, 3.0),
-                          blurRadius: 10.0,
-                          spreadRadius: 5,
-                        ),
-                      ]),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              badges.Badge(
-                                badgeContent: Text(
-                                  '$_totalQuantity',
-                                  style: const TextStyle(
-                                      color: AppColor.white, fontSize: 8),
-                                ),
-                                position: badges.BadgePosition.topEnd(end: -4),
-                                badgeStyle: const badges.BadgeStyle(
-                                    padding: EdgeInsets.only(
-                                        top: 4, left: 4, right: 3, bottom: 3)),
-                                badgeAnimation:
-                                    const badges.BadgeAnimation.slide(
-                                        animationDuration:
-                                            Duration(milliseconds: 200)),
-                                child: GestureDetector(
-                                  onTap: () {},
-                                  child: const Icon(
-                                      Icons.shopping_cart_outlined,
-                                      size: 28,
-                                      color: AppColor.red),
+                child: Column(
+                  children: [
+                    AnimatedContainer(
+                      height: _cartHeight,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: Container(
+                        color: AppColor.bgColor,
+                        child: Column(
+                          children: [
+                            if (_cartHeight != 0)
+                              SizedBox(
+                                height: 60,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {
+                                          _showDialog(
+                                              title:
+                                                  'Xóa tất cả sản phẩm trong giỏ hàng?',
+                                              successCb: resetCart);
+                                        },
+                                        child: const Text(
+                                          'Xóa tất cả',
+                                          style: TextStyle(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w400,
+                                              color: AppColor.red),
+                                        ),
+                                      ),
+                                      const Text(
+                                        'Giỏ hàng',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                      GestureDetector(
+                                          onTap: toggleOverlay,
+                                          child: const Padding(
+                                            padding: EdgeInsets.only(
+                                                top: 10, left: 14, bottom: 10),
+                                            child: Icon(
+                                              Icons.close,
+                                              size: 24,
+                                            ),
+                                          ))
+                                    ],
+                                  ),
                                 ),
                               ),
-                              Text(
-                                  NumberFormat.currency(
-                                          locale: 'vi_VN',
-                                          decimalDigits: 0,
-                                          symbol: 'VNĐ')
-                                      .format(_totalPrice),
-                                  style: const TextStyle(
-                                    color: AppColor.red,
-                                  )),
-                            ],
-                          ),
+                            Expanded(
+                              child: ListView.separated(
+                                padding: const EdgeInsets.only(
+                                    left: 14.0,
+                                    right: 14.0,
+                                    bottom: 18.0,
+                                    top: 10.0),
+                                itemCount: _booksInCart.length,
+                                itemBuilder: (context, index) {
+                                  BookModel book = _booksInCart.toList()[index];
+                                  return BookItem(
+                                    book: book,
+                                    increment: () =>
+                                        increment(_booksInCart[index]),
+                                    decrement: () {
+                                      if (_booksInCart[index].quantity == 1) {
+                                        _showDialog(
+                                            title:
+                                                'Bạn có muốn xóa sản phẩm này ra khỏi giỏ hàng',
+                                            successCb: () {
+                                              setState(() {
+                                                decrement(_booksInCart[index]);
+                                                _booksInCart.removeAt(index);
+                                                if (_booksInCart.isEmpty) {
+                                                  toggleOverlay();
+                                                }
+                                              });
+                                            });
+                                      } else {
+                                        setState(() {
+                                          decrement(_booksInCart[index]);
+                                        });
+                                      }
+                                    },
+                                  );
+                                },
+                                separatorBuilder: (context, index) =>
+                                    const Divider(height: 16, thickness: 1),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () {},
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          height: double.infinity,
-                          color: AppColor.red,
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'Thanh toán',
-                            style: TextStyle(color: AppColor.white),
-                          ),
+                    ),
+                    GestureDetector(
+                      onTap: toggleOverlay,
+                      child: Container(
+                        width: double.infinity,
+                        height: 50,
+                        decoration: BoxDecoration(
+                            color: HexColor('#eeeff5'),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color.fromARGB(39, 49, 49, 49),
+                                offset: Offset(0.0, 3.0),
+                                blurRadius: 10.0,
+                                spreadRadius: 5,
+                              ),
+                            ]),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    badges.Badge(
+                                      badgeContent: Text(
+                                        '$_totalQuantity',
+                                        style: const TextStyle(
+                                            color: AppColor.white, fontSize: 8),
+                                      ),
+                                      position:
+                                          badges.BadgePosition.topEnd(end: -4),
+                                      badgeStyle: const badges.BadgeStyle(
+                                          padding: EdgeInsets.only(
+                                              top: 4,
+                                              left: 4,
+                                              right: 3,
+                                              bottom: 3)),
+                                      badgeAnimation:
+                                          const badges.BadgeAnimation.slide(
+                                              animationDuration:
+                                                  Duration(milliseconds: 200)),
+                                      child: const Icon(
+                                          Icons.shopping_cart_outlined,
+                                          size: 28,
+                                          color: AppColor.red),
+                                    ),
+                                    Text(
+                                        NumberFormat.currency(
+                                                locale: 'vi_VN',
+                                                decimalDigits: 0,
+                                                symbol: 'VNĐ')
+                                            .format(_totalPrice),
+                                        style: const TextStyle(
+                                          color: AppColor.red,
+                                        )),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {},
+                              child: Container(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                height: double.infinity,
+                                color: AppColor.red,
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  'Đặt hàng',
+                                  style: TextStyle(color: AppColor.white),
+                                ),
+                              ),
+                            )
+                          ],
                         ),
-                      )
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-              )
+              ),
+            ]
           ],
         ));
   }
@@ -227,27 +375,92 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void decrement(int index) {
-    if (_searchBooks[index].quantity >= 1) {
-      setState(() {
-        _searchBooks[index].quantity = _searchBooks[index].quantity - 1;
-        _books[_books.indexWhere((book) => book.id == _searchBooks[index].id)] =
-            _searchBooks[index];
-        _prefs.setBooks(books: _books);
-        _totalPrice -= _searchBooks[index].price;
-        --_totalQuantity;
-      });
+  void decrement(BookModel item) {
+    if (item.quantity >= 1) {
+      // setState(() {
+      item.quantity = item.quantity - 1;
+      _books[_books.indexWhere((book) => book.id == item.id)] = item;
+      _prefs.setBooks(books: _books);
+      _totalPrice -= item.price;
+      --_totalQuantity;
+      // });
     }
   }
 
-  void increment(int index) {
+  void increment(BookModel item) {
     setState(() {
-      ++_searchBooks[index].quantity;
-      _books[_books.indexWhere((book) => book.id == _searchBooks[index].id)] =
-          _searchBooks[index];
+      ++item.quantity;
+      _books[_books.indexWhere((book) => book.id == item.id)] = item;
       _prefs.setBooks(books: _books);
-      _totalPrice += _searchBooks[index].price;
+      _totalPrice += item.price;
       ++_totalQuantity;
     });
+  }
+
+  void toggleOverlay() {
+    setState(() {
+      unFocusTextField();
+      if ((_cartHeight == 0)) {
+        _cartHeight = _cartMaxHeight;
+        _booksInCart = _books.where((book) => book.quantity > 0).toList();
+        return;
+      }
+      _cartHeight = 0;
+    });
+  }
+
+  void resetCart() {
+    setState(() {
+      _booksInCart = [];
+      _books = books;
+      _searchBooks = _searchBooks.map((book) {
+        book.quantity = 0;
+        return book;
+      }).toList();
+      _totalPrice = 0;
+      _totalQuantity = 0;
+      _prefs.setBooks(books: _books);
+      toggleOverlay();
+    });
+  }
+
+  void unFocusTextField() {
+    if (_focusNode.hasFocus) {
+      _focusNode.unfocus();
+    }
+  }
+
+  void _showDialog(
+      {required String title, required VoidCallback successCb}) async {
+    bool? status = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('😍'),
+        content: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 22.0),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (status ?? false) {
+      successCb();
+    }
   }
 }

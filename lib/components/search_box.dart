@@ -4,10 +4,12 @@ import '../resources/app_color.dart';
 class SearchBox extends StatelessWidget {
   const SearchBox({
     super.key,
+    this.focusNode,
     this.controller,
     this.onChanged,
   });
 
+  final FocusNode? focusNode;
   final TextEditingController? controller;
   final Function(String)? onChanged;
 
@@ -27,6 +29,7 @@ class SearchBox extends StatelessWidget {
         ],
       ),
       child: TextField(
+        focusNode: focusNode,
         controller: controller,
         onChanged: onChanged,
         decoration: const InputDecoration(
