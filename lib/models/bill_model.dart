@@ -33,6 +33,11 @@ class BillModel {
 
   DateTime get dateCreated =>
       DateTime.fromMillisecondsSinceEpoch(dateCreatedTimeStamp);
+  int get totalPrice =>
+      listBook
+          .map((e) => e.quantity * e.price)
+          .reduce((value, element) => value + element) -
+      tienGiam;
 
   @override
   String toString() {

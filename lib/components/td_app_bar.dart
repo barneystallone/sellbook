@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:sellbook/pages/home_page.dart';
+import '../models/user_model.dart';
+import '../pages/list_bill.dart';
 import '../pages/required_auth.dart';
 import '../resources/app_color.dart';
 import '../services/local/shared_prefs.dart';
@@ -8,13 +11,17 @@ class TdAppBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     this.rightPressed,
     this.overlay,
+    this.isHomePage = true,
+    required this.user,
     required this.title,
     this.color = AppColor.bgColor,
   });
   final SharedPrefs _prefs = SharedPrefs();
   final VoidCallback? rightPressed;
   final Widget? overlay;
+  final UserModel user;
   final String title;
+  final bool isHomePage;
   final Color color;
 
   @override
@@ -52,6 +59,24 @@ class TdAppBar extends StatelessWidget implements PreferredSizeWidget {
                           Expanded(child: Text('Logout')),
                         ],
                       )),
+                  PopupMenuItem(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      value: 1,
+                      height: 30,
+                      child: Row(
+                        children: [
+                          Icon(
+                            isHomePage
+                                ? Icons.open_in_new_outlined
+                                : Icons.home_outlined,
+                            size: 16.0,
+                            color: AppColor.brown,
+                          ),
+                          const SizedBox(width: 12.0),
+                          Expanded(
+                              child: Text(isHomePage ? 'Hóa Đơn' : 'Sellbook')),
+                        ],
+                      )),
                 ],
                 onSelected: (value) {
                   switch (value) {
@@ -61,6 +86,23 @@ class TdAppBar extends StatelessWidget implements PreferredSizeWidget {
                           context,
                           MaterialPageRoute(
                               builder: (context) => const RequiredAuth()));
+                      break;
+                    case 1:
+                      if (isHomePage) {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ListBill(
+                                      user: user,
+                                    )));
+                        break;
+                      }
+                      Navigator.pop(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => HomePage(
+                                    user: user,
+                                  )));
                       break;
                   }
                 },

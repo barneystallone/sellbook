@@ -80,6 +80,7 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
           backgroundColor: AppColor.bgColor,
           appBar: TdAppBar(
+              user: widget.user,
               overlay: (_cartHeight > 0)
                   ? GestureDetector(
                       onTap: toggleOverlay,

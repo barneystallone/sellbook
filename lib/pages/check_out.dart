@@ -14,8 +14,15 @@ import 'required_auth.dart';
 
 class CheckOut extends StatefulWidget {
   final List<BookModel> cartListItem;
+  final bool readOnly;
+  final String? dateCreatedStr;
   final UserModel user;
-  const CheckOut({super.key, required this.cartListItem, required this.user});
+  const CheckOut(
+      {super.key,
+      required this.cartListItem,
+      required this.user,
+      this.dateCreatedStr,
+      this.readOnly = false});
 
   @override
   State<CheckOut> createState() => _CheckOutState();
@@ -55,7 +62,9 @@ class _CheckOutState extends State<CheckOut> {
             child: Stack(children: [
               Positioned.fill(
                 child: Container(
-                  padding: const EdgeInsets.only(top: 70, bottom: 160),
+                  padding: widget.readOnly
+                      ? const EdgeInsets.only(top: 70)
+                      : const EdgeInsets.only(top: 70, bottom: 160),
                   child: ListView(
                     children: [
                       Container(
@@ -105,7 +114,28 @@ class _CheckOutState extends State<CheckOut> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      if (widget.dateCreatedStr != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10.0, vertical: 10.0),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.schedule_outlined,
+                                size: 14,
+                                color: AppColor.red,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                    'Đặt vào lúc ${widget.dateCreatedStr}',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14)),
+                              ),
+                            ],
+                          ),
+                        ),
                       // Thông tin hóa đơn
                       Container(
                         decoration: const BoxDecoration(
@@ -378,81 +408,87 @@ class _CheckOutState extends State<CheckOut> {
                                 size: 24,
                               ),
                             )),
-                        const Text(
-                          'Xác nhận đơn hàng',
-                          style: TextStyle(fontSize: 18, letterSpacing: 1),
+                        Text(
+                          widget.readOnly
+                              ? 'Thông tin đơn hàng'
+                              : 'Xác nhận đơn hàng',
+                          style:
+                              const TextStyle(fontSize: 18, letterSpacing: 1),
                         ),
                       ],
                     ),
                   )),
-              Positioned(
-                  left: 0.0,
-                  right: 0.0,
-                  bottom: 0,
-                  child: Container(
-                    color: AppColor.bgColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 20, bottom: 30),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                color: Colors.orange[300],
-                              ),
-                              const SizedBox(width: 8),
-                              const Expanded(
-                                child: Text(
-                                  'Bằng việc nhấn "Đặt đơn", bạn đồng ý tuân theo Điều khoản dịch vụ và Quy chế của chúng tôi',
-                                  style: TextStyle(overflow: TextOverflow.clip),
+              if (!widget.readOnly)
+                Positioned(
+                    left: 0.0,
+                    right: 0.0,
+                    bottom: 0,
+                    child: Container(
+                      color: AppColor.bgColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20, bottom: 30),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.receipt_long_outlined,
+                                  color: Colors.orange[300],
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    'Bằng việc nhấn "Đặt đơn", bạn đồng ý tuân theo Điều khoản dịch vụ và Quy chế của chúng tôi',
+                                    style:
+                                        TextStyle(overflow: TextOverflow.clip),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        CustomButton(
-                          onPressed: () {
-                            BillModel bill = BillModel(
-                                user: widget.user,
-                                listBook: widget.cartListItem,
-                                dateCreatedTimeStamp:
-                                    DateTime.now().millisecondsSinceEpoch,
-                                tienGiam: _tienGiam);
-                            print(bill);
+                          CustomButton(
+                            onPressed: () {
+                              BillModel bill = BillModel(
+                                  user: widget.user,
+                                  listBook: widget.cartListItem,
+                                  dateCreatedTimeStamp:
+                                      DateTime.now().millisecondsSinceEpoch,
+                                  tienGiam: _tienGiam);
+                              print(bill);
 
-                            _prefs.addBill(bill: bill).then((value) =>
-                                _prefs.deletetBooks().then((value) {
-                                  showSnackBar('Đặt hàng thành công');
-                                  Timer(const Duration(milliseconds: 1200), () {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (BuildContext context) =>
-                                            const RequiredAuth(),
-                                      ),
-                                    );
-                                    setState(() {
-                                      allowPop = true;
+                              _prefs.addBill(bill: bill).then((value) =>
+                                  _prefs.deletetBooks().then((value) {
+                                    showSnackBar('Đặt hàng thành công');
+                                    Timer(const Duration(milliseconds: 1200),
+                                        () {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (BuildContext context) =>
+                                              const RequiredAuth(),
+                                        ),
+                                      );
+                                      setState(() {
+                                        allowPop = true;
+                                      });
                                     });
-                                  });
-                                }));
-                            setState(() {
-                              allowPop = false;
-                            });
-                          },
-                          title:
-                              'Đặt đơn - ${NumberFormat.currency(locale: "vi_VN", symbol: "VNĐ").format(_totalPrice - _tienGiam)}',
-                          padding: null,
-                          shape: const RoundedRectangleBorder(),
-                          backgroundColor: AppColor.red,
-                          width: double.infinity,
-                        ),
-                      ],
-                    ),
-                  ))
+                                  }));
+                              setState(() {
+                                allowPop = false;
+                              });
+                            },
+                            title:
+                                'Đặt đơn - ${NumberFormat.currency(locale: "vi_VN", symbol: "VNĐ").format(_totalPrice - _tienGiam)}',
+                            padding: null,
+                            shape: const RoundedRectangleBorder(),
+                            backgroundColor: AppColor.red,
+                            width: double.infinity,
+                          ),
+                        ],
+                      ),
+                    ))
             ]),
           ),
         ),

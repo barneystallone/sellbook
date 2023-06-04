@@ -88,9 +88,9 @@ class SharedPrefs {
   }
 
   Future<void> addBill({required BillModel bill}) async {
-    List<BillModel> bills = await getBills() ?? [];
-    print('length: ${bills.length}');
-    bills.add(bill);
-    await setBills(bills: bills);
+    List<BillModel> _bills = await getBills() ?? bills;
+    // print('length: ${_bills.length}');
+    _bills.add(bill);
+    await setBills(bills: _bills);
   }
 }
