@@ -66,296 +66,281 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: AppColor.bgColor,
-        appBar: TdAppBar(
-            overlay: (_cartHeight > 0)
-                ? GestureDetector(
-                    onTap: toggleOverlay,
-                    child: overlay,
-                  )
-                : null,
-            rightPressed: () async {
-              bool? status = await showDialog<bool>(
-                context: context,
-                builder: (BuildContext context) => AlertDialog(
-                  title: const Text('😍'),
-                  content: Row(
-                    children: const [
-                      Expanded(
-                        child: Text(
-                          'Do you want to logout?',
-                          style: TextStyle(fontSize: 22.0),
-                          textAlign: TextAlign.center,
+    return WillPopScope(
+      onWillPop: () async {
+        bool status = await _showDialog(
+          title: 'Đồng ý để thoát khỏi ứng dụng',
+        );
+        if (!status) return false;
+
+        SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+        return true;
+        //  Future.value(false);
+      },
+      child: Scaffold(
+          backgroundColor: AppColor.bgColor,
+          appBar: TdAppBar(
+              overlay: (_cartHeight > 0)
+                  ? GestureDetector(
+                      onTap: toggleOverlay,
+                      child: overlay,
+                    )
+                  : null,
+              title: 'Sellbook'),
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                        left: 20.0,
+                        right: 20.0,
+                        top: 16.0,
+                        bottom: (_totalQuantity > 0) ? 64 : 12),
+                    child: Column(
+                      children: [
+                        SearchBox(
+                            focusNode: _focusNode,
+                            onChanged: (value) => setState(() {
+                                  _searchText = value;
+                                  searchBook();
+                                }),
+                            controller: _searchController),
+                        const SizedBox(height: 20),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('Tủ sách',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: AppColor.red,
+                                  fontWeight: FontWeight.w500)),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        ListView.separated(
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          padding: EdgeInsets.zero,
+                          itemCount: _searchBooks.length,
+                          itemBuilder: (context, index) {
+                            BookModel book = _searchBooks.toList()[index];
+                            return BookItem(
+                              book: book,
+                              increment: () => increment(_searchBooks[index]),
+                              decrement: () => setState(() {
+                                decrement(_searchBooks[index]);
+                              }),
+                            );
+                          },
+                          separatorBuilder: (context, index) =>
+                              const Divider(height: 16, thickness: 1),
+                        ),
+                      ],
+                    ),
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('OK'),
-                    ),
-                  ],
                 ),
-              );
-              if (status ?? false) {
-                SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-              }
-            },
-            title: 'Sellbook'),
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                      left: 20.0,
-                      right: 20.0,
-                      top: 16.0,
-                      bottom: (_totalQuantity > 0) ? 64 : 12),
+              ),
+              if (_cartHeight > 0)
+                GestureDetector(
+                  onTap: toggleOverlay,
+                  child: overlay,
+                ),
+
+              // Footer + Cart Modal
+              if (_totalQuantity > 0) ...[
+                Positioned(
+                  left: 0.0,
+                  right: 0,
+                  bottom: 0,
                   child: Column(
                     children: [
-                      SearchBox(
-                          focusNode: _focusNode,
-                          onChanged: (value) => setState(() {
-                                _searchText = value;
-                                searchBook();
-                              }),
-                          controller: _searchController),
-                      const SizedBox(height: 20),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('Tủ sách',
-                            style: TextStyle(
-                                fontSize: 16,
-                                color: AppColor.red,
-                                fontWeight: FontWeight.w500)),
+                      AnimatedContainer(
+                        height: _cartHeight,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        child: Container(
+                          color: AppColor.bgColor,
+                          child: Column(
+                            children: [
+                              if (_cartHeight != 0)
+                                SizedBox(
+                                  height: 60,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () {
+                                            _showDialogWithCB(
+                                                title:
+                                                    'Xóa tất cả sản phẩm trong giỏ hàng?',
+                                                successCb: resetCart);
+                                          },
+                                          child: const Text(
+                                            'Xóa tất cả',
+                                            style: TextStyle(
+                                                fontSize: 14.5,
+                                                fontWeight: FontWeight.w400,
+                                                color: AppColor.red),
+                                          ),
+                                        ),
+                                        const Text(
+                                          'Giỏ hàng',
+                                          style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                        GestureDetector(
+                                            onTap: toggleOverlay,
+                                            child: const Padding(
+                                              padding: EdgeInsets.only(
+                                                  top: 10,
+                                                  left: 14,
+                                                  bottom: 10),
+                                              child: Icon(
+                                                Icons.close,
+                                                size: 24,
+                                              ),
+                                            ))
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              Expanded(
+                                child: ListView.separated(
+                                  padding: const EdgeInsets.only(
+                                      left: 14.0,
+                                      right: 14.0,
+                                      bottom: 18.0,
+                                      top: 10.0),
+                                  itemCount: _booksInCart.length,
+                                  itemBuilder: (context, index) {
+                                    BookModel book =
+                                        _booksInCart.toList()[index];
+                                    return BookItem(
+                                      book: book,
+                                      increment: () =>
+                                          increment(_booksInCart[index]),
+                                      decrement: () {
+                                        if (_booksInCart[index].quantity == 1) {
+                                          _showDialogWithCB(
+                                              title:
+                                                  'Bạn có muốn xóa sản phẩm này ra khỏi giỏ hàng',
+                                              successCb: () {
+                                                setState(() {
+                                                  decrement(
+                                                      _booksInCart[index]);
+                                                  _booksInCart.removeAt(index);
+                                                  if (_booksInCart.isEmpty) {
+                                                    toggleOverlay();
+                                                  }
+                                                });
+                                              });
+                                        } else {
+                                          setState(() {
+                                            decrement(_booksInCart[index]);
+                                          });
+                                        }
+                                      },
+                                    );
+                                  },
+                                  separatorBuilder: (context, index) =>
+                                      const Divider(height: 16, thickness: 1),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      ListView.separated(
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        padding: EdgeInsets.zero,
-                        itemCount: _searchBooks.length,
-                        itemBuilder: (context, index) {
-                          BookModel book = _searchBooks.toList()[index];
-                          return BookItem(
-                            book: book,
-                            increment: () => increment(_searchBooks[index]),
-                            decrement: () => setState(() {
-                              decrement(_searchBooks[index]);
-                            }),
-                          );
-                        },
-                        separatorBuilder: (context, index) =>
-                            const Divider(height: 16, thickness: 1),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (_cartHeight > 0)
-              GestureDetector(
-                onTap: toggleOverlay,
-                child: overlay,
-              ),
-
-            // Footer + Cart Modal
-            if (_totalQuantity > 0) ...[
-              Positioned(
-                left: 0.0,
-                right: 0,
-                bottom: 0,
-                child: Column(
-                  children: [
-                    AnimatedContainer(
-                      height: _cartHeight,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      child: Container(
-                        color: AppColor.bgColor,
-                        child: Column(
-                          children: [
-                            if (_cartHeight != 0)
-                              SizedBox(
-                                height: 60,
+                      GestureDetector(
+                        onTap: toggleOverlay,
+                        child: Container(
+                          width: double.infinity,
+                          height: 50,
+                          decoration: BoxDecoration(
+                              color: HexColor('#eeeff5'),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color.fromARGB(39, 49, 49, 49),
+                                  offset: Offset(0.0, 3.0),
+                                  blurRadius: 10.0,
+                                  spreadRadius: 5,
+                                ),
+                              ]),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
                                 child: Padding(
-                                  padding: const EdgeInsets.all(10),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14.0),
                                   child: Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
-                                      GestureDetector(
-                                        onTap: () {
-                                          _showDialog(
-                                              title:
-                                                  'Xóa tất cả sản phẩm trong giỏ hàng?',
-                                              successCb: resetCart);
-                                        },
-                                        child: const Text(
-                                          'Xóa tất cả',
-                                          style: TextStyle(
-                                              fontSize: 14.5,
-                                              fontWeight: FontWeight.w400,
-                                              color: AppColor.red),
+                                      badges.Badge(
+                                        badgeContent: Text(
+                                          '$_totalQuantity',
+                                          style: const TextStyle(
+                                              color: AppColor.white,
+                                              fontSize: 8),
                                         ),
-                                      ),
-                                      const Text(
-                                        'Giỏ hàng',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                      GestureDetector(
-                                          onTap: toggleOverlay,
-                                          child: const Padding(
+                                        position: badges.BadgePosition.topEnd(
+                                            end: -4),
+                                        badgeStyle: const badges.BadgeStyle(
                                             padding: EdgeInsets.only(
-                                                top: 10, left: 14, bottom: 10),
-                                            child: Icon(
-                                              Icons.close,
-                                              size: 24,
-                                            ),
-                                          ))
+                                                top: 4,
+                                                left: 4,
+                                                right: 3,
+                                                bottom: 3)),
+                                        badgeAnimation:
+                                            const badges.BadgeAnimation.slide(
+                                                animationDuration: Duration(
+                                                    milliseconds: 200)),
+                                        child: const Icon(
+                                            Icons.shopping_cart_outlined,
+                                            size: 28,
+                                            color: AppColor.red),
+                                      ),
+                                      Text(
+                                          NumberFormat.currency(
+                                                  locale: 'vi_VN',
+                                                  decimalDigits: 0,
+                                                  symbol: 'VNĐ')
+                                              .format(_totalPrice),
+                                          style: const TextStyle(
+                                            color: AppColor.red,
+                                          )),
                                     ],
                                   ),
                                 ),
                               ),
-                            Expanded(
-                              child: ListView.separated(
-                                padding: const EdgeInsets.only(
-                                    left: 14.0,
-                                    right: 14.0,
-                                    bottom: 18.0,
-                                    top: 10.0),
-                                itemCount: _booksInCart.length,
-                                itemBuilder: (context, index) {
-                                  BookModel book = _booksInCart.toList()[index];
-                                  return BookItem(
-                                    book: book,
-                                    increment: () =>
-                                        increment(_booksInCart[index]),
-                                    decrement: () {
-                                      if (_booksInCart[index].quantity == 1) {
-                                        _showDialog(
-                                            title:
-                                                'Bạn có muốn xóa sản phẩm này ra khỏi giỏ hàng',
-                                            successCb: () {
-                                              setState(() {
-                                                decrement(_booksInCart[index]);
-                                                _booksInCart.removeAt(index);
-                                                if (_booksInCart.isEmpty) {
-                                                  toggleOverlay();
-                                                }
-                                              });
-                                            });
-                                      } else {
-                                        setState(() {
-                                          decrement(_booksInCart[index]);
-                                        });
-                                      }
-                                    },
-                                  );
-                                },
-                                separatorBuilder: (context, index) =>
-                                    const Divider(height: 16, thickness: 1),
-                              ),
-                            ),
-                          ],
+                              GestureDetector(
+                                onTap: redirectToCheckOut,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  height: double.infinity,
+                                  color: AppColor.red,
+                                  alignment: Alignment.center,
+                                  child: const Text(
+                                    'Đặt hàng',
+                                    style: TextStyle(color: AppColor.white),
+                                  ),
+                                ),
+                              )
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: toggleOverlay,
-                      child: Container(
-                        width: double.infinity,
-                        height: 50,
-                        decoration: BoxDecoration(
-                            color: HexColor('#eeeff5'),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color.fromARGB(39, 49, 49, 49),
-                                offset: Offset(0.0, 3.0),
-                                blurRadius: 10.0,
-                                spreadRadius: 5,
-                              ),
-                            ]),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14.0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    badges.Badge(
-                                      badgeContent: Text(
-                                        '$_totalQuantity',
-                                        style: const TextStyle(
-                                            color: AppColor.white, fontSize: 8),
-                                      ),
-                                      position:
-                                          badges.BadgePosition.topEnd(end: -4),
-                                      badgeStyle: const badges.BadgeStyle(
-                                          padding: EdgeInsets.only(
-                                              top: 4,
-                                              left: 4,
-                                              right: 3,
-                                              bottom: 3)),
-                                      badgeAnimation:
-                                          const badges.BadgeAnimation.slide(
-                                              animationDuration:
-                                                  Duration(milliseconds: 200)),
-                                      child: const Icon(
-                                          Icons.shopping_cart_outlined,
-                                          size: 28,
-                                          color: AppColor.red),
-                                    ),
-                                    Text(
-                                        NumberFormat.currency(
-                                                locale: 'vi_VN',
-                                                decimalDigits: 0,
-                                                symbol: 'VNĐ')
-                                            .format(_totalPrice),
-                                        style: const TextStyle(
-                                          color: AppColor.red,
-                                        )),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: redirectToCheckOut,
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                height: double.infinity,
-                                color: AppColor.red,
-                                alignment: Alignment.center,
-                                child: const Text(
-                                  'Đặt hàng',
-                                  style: TextStyle(color: AppColor.white),
-                                ),
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ]
-          ],
-        ));
+              ]
+            ],
+          )),
+    );
   }
 
   void searchBook() {
@@ -452,8 +437,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _showDialog(
-      {required String title, required VoidCallback successCb}) async {
+  Future<bool> _showDialog({required String title}) async {
     bool? status = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -481,7 +465,13 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-    if (status ?? false) {
+    return status ?? false;
+  }
+
+  void _showDialogWithCB(
+      {required String title, required VoidCallback successCb}) async {
+    bool status = await _showDialog(title: title);
+    if (status) {
       successCb();
     }
   }

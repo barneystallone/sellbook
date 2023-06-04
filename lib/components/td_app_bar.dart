@@ -57,7 +57,7 @@ class TdAppBar extends StatelessWidget implements PreferredSizeWidget {
                   switch (value) {
                     case 0:
                       _prefs.logOut();
-                      Navigator.push(
+                      Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                               builder: (context) => const RequiredAuth()));

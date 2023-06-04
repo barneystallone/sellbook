@@ -79,9 +79,9 @@ class _LoginFormState extends State<LoginForm> {
             _submitErrorMessage = 'Sai tên đăng nhập hoặc mật khẩu';
           });
         }
-        user.password = null;
+
         _prefs.setCurrentUser(user);
-        Navigator.push(
+        Navigator.pushReplacement(
             context,
             MaterialPageRoute(
                 builder: (context) => HomePage(
