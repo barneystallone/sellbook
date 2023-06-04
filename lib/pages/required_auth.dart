@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/user_model.dart';
 import '../pages/auth.dart';
 import '../pages/home_page.dart';
 
@@ -14,9 +15,10 @@ class RequiredAuth extends StatefulWidget {
 class _RequiredAuthState extends State<RequiredAuth> {
   final SharedPrefs _prefs = SharedPrefs();
   Future<Widget> checkLogin() async {
-    String? userName = await _prefs.getUsername();
+    UserModel? user = await _prefs.getCurrentUser();
+    print(user);
     await Future.delayed(const Duration(milliseconds: 1200));
-    return (userName != null) ? const HomePage() : const Auth();
+    return (user != null) ? HomePage(user: user) : const Auth();
   }
 
   @override

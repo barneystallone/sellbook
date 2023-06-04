@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hexcolor/hexcolor.dart';
@@ -6,15 +8,19 @@ import '../components/book_item.dart';
 import '../components/search_box.dart';
 import '../components/td_app_bar.dart';
 import '../models/book_model.dart';
+import '../models/user_model.dart';
 import '../resources/app_color.dart';
 import '../services/local/shared_prefs.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animations/animations.dart';
 
+import 'check_out.dart';
+
 class HomePage extends StatefulWidget {
+  final UserModel user;
   // final String title;
-  const HomePage({super.key});
+  const HomePage({super.key, required this.user});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -327,7 +333,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                             GestureDetector(
-                              onTap: () {},
+                              onTap: redirectToCheckOut,
                               child: Container(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -354,8 +360,10 @@ class _HomePageState extends State<HomePage> {
 
   void searchBook() {
     setState(() {
+      final String _searchlowerCase = _searchText.toLowerCase();
       _searchBooks = _books
-          .where((element) => element.name.contains(_searchText))
+          .where((element) =>
+              element.name.toLowerCase().contains(_searchlowerCase))
           .toList();
     });
   }
@@ -363,7 +371,12 @@ class _HomePageState extends State<HomePage> {
   initBooks() {
     _prefs.getBooks().then((value) {
       setState(() {
-        _books = value ?? books;
+        // _books = value ?? books;
+        _books = value ??
+            (jsonDecode(jsonEncode(books)).cast<Map<String, dynamic>>()
+                    as List<Map<String, dynamic>>)
+                .map((e) => BookModel.fromJson(e))
+                .toList();
         _searchBooks = [..._books];
         _totalPrice = _books
             .map((e) => e.price * e.quantity)
@@ -412,7 +425,16 @@ class _HomePageState extends State<HomePage> {
   void resetCart() {
     setState(() {
       _booksInCart = [];
-      _books = books;
+
+      _books = (jsonDecode(jsonEncode(books)).cast<Map<String, dynamic>>()
+              as List<Map<String, dynamic>>)
+          .map((e) => BookModel.fromJson(e))
+          .toList();
+
+      // _books = _books.map((book) {
+      //   book.quantity = 0;
+      //   return book;
+      // }).toList();
       _searchBooks = _searchBooks.map((book) {
         book.quantity = 0;
         return book;
@@ -462,5 +484,16 @@ class _HomePageState extends State<HomePage> {
     if (status ?? false) {
       successCb();
     }
+  }
+
+  redirectToCheckOut() {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => CheckOut(
+                  cartListItem:
+                      _books.where((book) => book.quantity > 0).toList(),
+                  user: widget.user,
+                )));
   }
 }

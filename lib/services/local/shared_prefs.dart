@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:sellbook/models/bill_model.dart';
 import 'package:sellbook/models/book_model.dart';
+import 'package:sellbook/models/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/todo_model.dart';
 
@@ -43,18 +45,52 @@ class SharedPrefs {
     prefs.setString(key, jsonEncode(maps));
   }
 
-  Future<String?> getUsername() async {
+  Future<void> deletetBooks() async {
+    const String key = 'books';
     SharedPreferences prefs = await _prefs;
-    return prefs.getString('username');
+    prefs.remove(key);
   }
 
-  Future<void> setUsername(String username) async {
+  Future<UserModel?> getCurrentUser() async {
     SharedPreferences prefs = await _prefs;
-    prefs.setString('username', username);
+    String? data = prefs.getString('user');
+    if (data == null) return null;
+    return UserModel.fromJson(jsonDecode(data) as Map<String, dynamic>);
+  }
+
+  Future<void> setCurrentUser(UserModel user) async {
+    SharedPreferences prefs = await _prefs;
+    Map<String, dynamic> map = user.toJson();
+    prefs.setString('user', jsonEncode(map));
   }
 
   Future<void> logOut() async {
     SharedPreferences prefs = await _prefs;
-    prefs.remove('username');
+    prefs.remove('user');
+  }
+
+  Future<List<BillModel>?> getBills() async {
+    SharedPreferences prefs = await _prefs;
+    const String key = 'bills';
+    String? data = prefs.getString(key);
+    if (data == null) return null;
+    List<Map<String, dynamic>> maps = jsonDecode(data)
+        .cast<Map<String, dynamic>>() as List<Map<String, dynamic>>;
+    List<BillModel> bills = maps.map((e) => BillModel.fromJson(e)).toList();
+    return bills;
+  }
+
+  Future<void> setBills({required List<BillModel> bills}) async {
+    List<Map<String, dynamic>> maps = bills.map((e) => e.toJson()).toList();
+    const String key = 'bills';
+    SharedPreferences prefs = await _prefs;
+    prefs.setString(key, jsonEncode(maps));
+  }
+
+  Future<void> addBill({required BillModel bill}) async {
+    List<BillModel> bills = await getBills() ?? [];
+    print('length: ${bills.length}');
+    bills.add(bill);
+    await setBills(bills: bills);
   }
 }

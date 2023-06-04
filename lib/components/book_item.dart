@@ -9,13 +9,13 @@ class BookItem extends StatelessWidget {
   const BookItem({
     super.key,
     required this.book,
-    required this.increment,
-    required this.decrement,
+    this.increment,
+    this.decrement,
   });
 
   final BookModel book;
-  final VoidCallback increment;
-  final VoidCallback decrement;
+  final VoidCallback? increment;
+  final VoidCallback? decrement;
 
   @override
   Widget build(BuildContext context) {
